@@ -55,28 +55,34 @@ health:
 `
 )
 
-var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
-	parentCtx := context.Background()
-
+var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func() {
 	f := e2e.DefaultShootCreationFramework()
 	f.Shoot = e2e.DefaultShoot("e2e-cache-pr")
 
 	var (
-		password string
-		secret   *corev1.Secret
+		password        string
+		secret          *corev1.Secret
+		upstreamHostPort string
 	)
 
-	BeforeEach(func() {
-		ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
-		defer cancel()
+	BeforeAll(func() {
+		DeferCleanup(func(ctx SpecContext) {
+			if secret != nil {
+				// Ignore not-found in case the secret was never created
+				_ = f.GardenClient.Client().Delete(ctx, secret)
+			}
+		}, NodeTimeout(10*time.Second))
+		DeferCleanup(func(ctx SpecContext) {
+			Expect(e2e.DeleteShootIfExists(ctx, f)).To(Succeed())
+		}, NodeTimeout(10*time.Minute))
+	})
 
-		// Prepare htpasswd
+	It("should create Shoot", func(ctx SpecContext) {
 		var err error
 		password, err = utils.GenerateRandomString(32)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(password).To(HaveLen(32))
 
-		// Create Secret in the Project namespace
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ro-upstream-secret",
@@ -90,36 +96,20 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
 			},
 		}
 		Expect(f.GardenClient.Client().Create(ctx, secret)).To(Succeed())
-	})
 
-	AfterEach(func() {
-		ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
-		defer cancel()
-
-		Expect(f.GardenClient.Client().Delete(ctx, secret)).To(Succeed())
-	})
-
-	It("should create Shoot, enable extension for private registry, delete Shoot", func() {
-		By("Create Shoot")
-		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
+	}, SpecTimeout(15*time.Minute))
 
-		By("Deploy test upstream registry")
-		ctx, cancel = context.WithTimeout(parentCtx, 3*time.Minute)
-		defer cancel()
-		upstreamHostPort := deployUpstreamRegistry(ctx, f, password)
+	It("should deploy test upstream registry", func(ctx SpecContext) {
+		upstreamHostPort = deployUpstreamRegistry(ctx, f, password)
+	}, SpecTimeout(3*time.Minute))
 
-		By("Push image to the test upstream registry")
-		ctx, cancel = context.WithTimeout(parentCtx, 2*time.Minute)
-		defer cancel()
+	It("should push image to the test upstream registry", func(ctx SpecContext) {
 		pushImageToUpstreamRegistry(ctx, f, upstreamHostPort, password)
+	}, SpecTimeout(2*time.Minute))
 
-		By("Enable the registry-cache extension")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-		defer cancel()
-
+	It("should enable the registry-cache extension", func(ctx SpecContext) {
 		Expect(f.UpdateShoot(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
 			addPrivateRegistrySecret(shoot)
 			size := resource.MustParse("1Gi")
@@ -134,22 +124,20 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
 
 			return nil
 		})).To(Succeed())
+	}, SpecTimeout(10*time.Minute))
 
-		By("[" + upstreamHostPort + "] Verify registry-cache works")
-		common.VerifyRegistryCache(parentCtx, f.Logger, f.ShootFramework.ShootClient, fmt.Sprintf("%s/%s", upstreamHostPort, alpine3188Image), common.AlpinePodMutateFn)
+	It("should verify registry-cache works", func(ctx SpecContext) {
+		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, fmt.Sprintf("%s/%s", upstreamHostPort, alpine3188Image), common.AlpinePodMutateFn)
+	}, SpecTimeout(10*time.Minute))
 
+	It("should delete Shoot", func(ctx SpecContext) {
 		By("Delete upstream registry namespace")
-		ctx, cancel = context.WithTimeout(parentCtx, 2*time.Minute)
-		defer cancel()
 		namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: upstreamRegistryNamespace}}
 		Expect(f.ShootFramework.ShootClient.Client().Delete(ctx, namespace)).To(Or(Succeed(), BeNotFoundError()))
 		Expect(f.WaitUntilNamespaceIsDeleted(ctx, f.ShootFramework.ShootClient, upstreamRegistryNamespace)).To(Succeed())
 
-		By("Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-		defer cancel()
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
-	})
+	}, SpecTimeout(10*time.Minute))
 })
 
 func addPrivateRegistrySecret(shoot *gardencorev1beta1.Shoot) {

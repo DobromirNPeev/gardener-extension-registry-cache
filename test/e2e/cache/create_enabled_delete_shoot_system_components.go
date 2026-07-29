@@ -21,9 +21,7 @@ import (
 	"github.com/gardener/gardener-extension-registry-cache/test/e2e"
 )
 
-var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
-	parentCtx := context.Background()
-
+var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func() {
 	f := e2e.DefaultShootCreationFramework()
 	shoot := e2e.DefaultShoot("e2e-cache-ssc")
 	size := resource.MustParse("2Gi")
@@ -34,29 +32,32 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
 	})
 	f.Shoot = shoot
 
-	It("should create Shoot with registry-cache extension enabled with caches for Shoot system components, delete Shoot", func() {
-		By("Create Shoot")
-		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
+	BeforeAll(func() {
+		DeferCleanup(func(ctx SpecContext) {
+			Expect(e2e.DeleteShootIfExists(ctx, f)).To(Succeed())
+		}, NodeTimeout(15*time.Minute))
+	})
+
+	It("should create Shoot", func(ctx SpecContext) {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
+	}, SpecTimeout(15*time.Minute))
 
-		By("Make sure there are no I/O timeout logs in containerd for image pulls")
-		ctx, cancel = context.WithTimeout(parentCtx, 3*time.Minute)
-		defer cancel()
+	It("should verify no I/O timeout logs in containerd for image pulls", func(ctx SpecContext) {
 		verifyNoTimeoutLogsInContainerd(ctx, f.Logger, f.ShootFramework.ShootClient)
+	}, SpecTimeout(3*time.Minute))
 
-		By("[europe-docker.pkg.dev] Verify registry-cache works")
-		common.VerifyRegistryCache(parentCtx, f.Logger, f.ShootFramework.ShootClient, common.ArtifactRegistryNginx1176Image)
+	It("[europe-docker.pkg.dev] should verify registry-cache works", func(ctx SpecContext) {
+		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, common.ArtifactRegistryNginx1176Image)
+	}, SpecTimeout(10*time.Minute))
 
-		By("[registry.k8s.io] Verify registry-cache works")
-		common.VerifyRegistryCache(parentCtx, f.Logger, f.ShootFramework.ShootClient, common.RegistryK8sNginx1154Image)
+	It("[registry.k8s.io] should verify registry-cache works", func(ctx SpecContext) {
+		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, common.RegistryK8sNginx1154Image)
+	}, SpecTimeout(10*time.Minute))
 
-		By("Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
+	It("should delete Shoot", func(ctx SpecContext) {
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
-	})
+	}, SpecTimeout(15*time.Minute))
 })
 
 func verifyNoTimeoutLogsInContainerd(ctx context.Context, logger logr.Logger, shootClient kubernetes.Interface) {

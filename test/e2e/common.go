@@ -5,11 +5,13 @@
 package e2e
 
 import (
+	"context"
 	"os"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/test/framework"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -17,7 +19,14 @@ const (
 	projectNamespace = "garden-local"
 )
 
-// DefaultShootCreationFramework returns default Shoot creation framework for e2e tests.
+// DeleteShootIfExists deletes the given Shoot and waits for deletion, but is a no-op if the Shoot no longer exists.
+// Use this in DeferCleanup to avoid failures when the test's last It already deleted the Shoot.
+func DeleteShootIfExists(ctx context.Context, f *framework.ShootCreationFramework) error {
+	if err := f.GetShoot(ctx, f.Shoot); apierrors.IsNotFound(err) {
+		return nil
+	}
+	return f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)
+}
 func DefaultShootCreationFramework() *framework.ShootCreationFramework {
 	kubeconfigPath := os.Getenv("KUBECONFIG")
 	return framework.NewShootCreationFramework(&framework.ShootCreationConfig{

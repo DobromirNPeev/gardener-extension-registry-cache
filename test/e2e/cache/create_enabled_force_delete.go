@@ -5,7 +5,6 @@
 package cache
 
 import (
-	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -17,9 +16,7 @@ import (
 	"github.com/gardener/gardener-extension-registry-cache/test/e2e"
 )
 
-var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
-	parentCtx := context.Background()
-
+var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func() {
 	f := e2e.DefaultShootCreationFramework()
 	shoot := e2e.DefaultShoot("e2e-cache-fd")
 	size := resource.MustParse("2Gi")
@@ -32,16 +29,12 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
 	})
 	f.Shoot = shoot
 
-	It("should create Shoot with registry-cache extension enabled, force delete Shoot", func() {
-		By("Create Shoot")
-		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
+	It("should create Shoot", func(ctx SpecContext) {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
+	}, SpecTimeout(15*time.Minute))
 
-		By("Force Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-		defer cancel()
+	It("should force delete Shoot", func(ctx SpecContext) {
 		Expect(f.ForceDeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
-	})
+	}, SpecTimeout(10*time.Minute))
 })

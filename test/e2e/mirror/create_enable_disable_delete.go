@@ -5,7 +5,6 @@
 package mirror
 
 import (
-	"context"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -17,22 +16,22 @@ import (
 	"github.com/gardener/gardener-extension-registry-cache/test/e2e"
 )
 
-var _ = Describe("Registry Mirror Extension Tests", Label("mirror"), func() {
-	parentCtx := context.Background()
-
+var _ = Describe("Registry Mirror Extension Tests", Label("mirror"), Ordered, func() {
 	f := e2e.DefaultShootCreationFramework()
 	f.Shoot = e2e.DefaultShoot("e2e-mirror-def")
 
-	It("should create Shoot, enable extension, disable extension, delete Shoot", func() {
-		By("Create Shoot")
-		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
+	BeforeAll(func() {
+		DeferCleanup(func(ctx SpecContext) {
+			Expect(e2e.DeleteShootIfExists(ctx, f)).To(Succeed())
+		}, NodeTimeout(15*time.Minute))
+	})
+
+	It("should create Shoot", func(ctx SpecContext) {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
+	}, SpecTimeout(15*time.Minute))
 
-		By("Enable the registry-mirror extension")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-		defer cancel()
+	It("should enable the registry-mirror extension", func(ctx SpecContext) {
 		Expect(f.UpdateShoot(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
 			common.AddOrUpdateRegistryMirrorExtension(shoot, []v1alpha1.MirrorConfiguration{
 				{
@@ -53,35 +52,30 @@ var _ = Describe("Registry Mirror Extension Tests", Label("mirror"), func() {
 
 			return nil
 		})).To(Succeed())
+	}, SpecTimeout(10*time.Minute))
 
-		By("Verify registry mirror configuration is applied")
-		ctx, cancel = context.WithTimeout(parentCtx, 1*time.Minute)
-		defer cancel()
-		upstreamToHostsTOML := map[string]string{
+	It("should verify registry mirror configuration is applied", func(ctx SpecContext) {
+		common.VerifyHostsTOMLFilesCreatedForAllNodes(ctx, f.Logger, f.ShootFramework.ShootClient, map[string]string{
 			"docker.io":      dockerHostsTOML,
 			"public.ecr.aws": ecrHostsTOML,
-		}
-		common.VerifyHostsTOMLFilesCreatedForAllNodes(ctx, f.Logger, f.ShootFramework.ShootClient, upstreamToHostsTOML)
+		})
+	}, SpecTimeout(1*time.Minute))
 
-		By("Disable the registry-mirror extension")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-		defer cancel()
+	It("should disable the registry-mirror extension", func(ctx SpecContext) {
 		Expect(f.UpdateShoot(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
 			common.RemoveExtension(shoot, "registry-mirror")
 
 			return nil
 		})).To(Succeed())
+	}, SpecTimeout(10*time.Minute))
 
-		By("Verify registry mirror configuration is removed")
-		ctx, cancel = context.WithTimeout(parentCtx, 1*time.Minute)
-		defer cancel()
+	It("should verify registry mirror configuration is removed", func(ctx SpecContext) {
 		common.VerifyHostsTOMLFilesDeletedForAllNodes(ctx, f.Logger, f.ShootFramework.ShootClient, []string{"docker.io"})
+	}, SpecTimeout(1*time.Minute))
 
-		By("Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
+	It("should delete Shoot", func(ctx SpecContext) {
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
-	})
+	}, SpecTimeout(15*time.Minute))
 })
 
 const (
