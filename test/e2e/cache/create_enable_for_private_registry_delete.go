@@ -60,8 +60,8 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func
 	f.Shoot = e2e.DefaultShoot("e2e-cache-pr")
 
 	var (
-		password        string
-		secret          *corev1.Secret
+		password         string
+		secret           *corev1.Secret
 		upstreamHostPort string
 	)
 
