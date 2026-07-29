@@ -30,9 +30,10 @@ import (
 )
 
 const (
-	alpine3188Image    = "alpine:3.18.8"
-	registryImage      = "europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.1.1@sha256:1be55279f18a2fe1a74edf2664cac61c1bea305b7b4642dab412e7affdcb3e33"
-	upstreamConfigYAML = `version: 0.1
+	alpine3188Image           = "alpine:3.18.8"
+	registryImage             = "europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.1.1@sha256:1be55279f18a2fe1a74edf2664cac61c1bea305b7b4642dab412e7affdcb3e33"
+	upstreamRegistryNamespace = "registry-test"
+	upstreamConfigYAML        = `version: 0.1
 log:
   fields:
     service: registry
@@ -95,6 +96,13 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
 		defer cancel()
 
 		Expect(f.GardenClient.Client().Delete(ctx, secret)).To(Succeed())
+
+		if f.ShootFramework != nil {
+			ctx2, cancel2 := context.WithTimeout(parentCtx, 30*time.Second)
+			defer cancel2()
+			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: upstreamRegistryNamespace}}
+			_ = f.ShootFramework.ShootClient.Client().Delete(ctx2, ns)
+		}
 	})
 
 	It("should create Shoot, enable extension for private registry, delete Shoot", func() {
@@ -156,6 +164,10 @@ func addPrivateRegistrySecret(shoot *gardencorev1beta1.Shoot) {
 
 // deployUpstreamRegistry deploy test upstream registry and return the <host:port> to it
 func deployUpstreamRegistry(ctx context.Context, f *framework.ShootCreationFramework, password string) (upstreamHostPort string) {
+	// Create dedicated namespace for the upstream registry
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: upstreamRegistryNamespace}}
+	ExpectWithOffset(1, f.ShootFramework.ShootClient.Client().Create(ctx, ns)).To(Succeed())
+
 	// Create htpasswd Secret
 	encryptedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
@@ -164,7 +176,7 @@ func deployUpstreamRegistry(ctx context.Context, f *framework.ShootCreationFrame
 	htpasswdSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-registry-auth",
-			Namespace: metav1.NamespaceSystem,
+			Namespace: upstreamRegistryNamespace,
 		},
 		Data: map[string][]byte{
 			"htpasswd": encryptedPassword,
@@ -176,7 +188,7 @@ func deployUpstreamRegistry(ctx context.Context, f *framework.ShootCreationFrame
 	configSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-registry-config",
-			Namespace: metav1.NamespaceSystem,
+			Namespace: upstreamRegistryNamespace,
 		},
 		Data: map[string][]byte{
 			"config.yml": []byte(upstreamConfigYAML),
@@ -188,7 +200,7 @@ func deployUpstreamRegistry(ctx context.Context, f *framework.ShootCreationFrame
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-registry",
-			Namespace: metav1.NamespaceSystem,
+			Namespace: upstreamRegistryNamespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
@@ -211,7 +223,7 @@ func deployUpstreamRegistry(ctx context.Context, f *framework.ShootCreationFrame
 	registry := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-registry",
-			Namespace: metav1.NamespaceSystem,
+			Namespace: upstreamRegistryNamespace,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: service.Name,
@@ -301,13 +313,13 @@ func deployUpstreamRegistry(ctx context.Context, f *framework.ShootCreationFrame
 		},
 	}
 	ExpectWithOffset(1, f.ShootFramework.ShootClient.Client().Create(ctx, registry)).To(Succeed())
-	ExpectWithOffset(1, f.WaitUntilStatefulSetIsRunning(ctx, "test-registry", metav1.NamespaceSystem, f.ShootFramework.ShootClient)).To(Succeed())
+	ExpectWithOffset(1, f.WaitUntilStatefulSetIsRunning(ctx, "test-registry", upstreamRegistryNamespace, f.ShootFramework.ShootClient)).To(Succeed())
 
 	// Alow traffic to test registry
 	networkPolicy := &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "allow-test-registry",
-			Namespace: metav1.NamespaceSystem,
+			Namespace: upstreamRegistryNamespace,
 		},
 		Spec: networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"app": "test-registry"}},
