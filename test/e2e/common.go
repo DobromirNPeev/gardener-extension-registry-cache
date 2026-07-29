@@ -27,6 +27,8 @@ func DeleteShootIfExists(ctx context.Context, f *framework.ShootCreationFramewor
 	}
 	return f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)
 }
+
+// DefaultShootCreationFramework returns default Shoot creation framework for e2e tests.
 func DefaultShootCreationFramework() *framework.ShootCreationFramework {
 	kubeconfigPath := os.Getenv("KUBECONFIG")
 	return framework.NewShootCreationFramework(&framework.ShootCreationConfig{
