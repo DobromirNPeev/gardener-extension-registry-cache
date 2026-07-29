@@ -21,7 +21,7 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func
 	f := e2e.DefaultShootCreationFramework()
 	f.Shoot = e2e.DefaultShoot("e2e-cache-def")
 
-	BeforeAll(func(ctx SpecContext) {
+	BeforeAll(func() {
 		DeferCleanup(func(ctx SpecContext) {
 			Expect(e2e.DeleteShootIfExists(ctx, f)).To(Succeed())
 		}, NodeTimeout(15*time.Minute))
