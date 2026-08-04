@@ -96,14 +96,6 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
 		defer cancel()
 
 		Expect(f.GardenClient.Client().Delete(ctx, secret)).To(Succeed())
-
-		if f.ShootFramework != nil {
-			ctx, cancel = context.WithTimeout(parentCtx, 2*time.Minute)
-			defer cancel()
-			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: upstreamRegistryNamespace}}
-			Expect(client.IgnoreNotFound(f.ShootFramework.ShootClient.Client().Delete(ctx, ns))).To(Succeed())
-			Expect(f.ShootFramework.WaitUntilNamespaceIsDeleted(ctx, f.ShootFramework.ShootClient, upstreamRegistryNamespace)).To(Succeed())
-		}
 	})
 
 	It("should create Shoot, enable extension for private registry, delete Shoot", func() {
@@ -144,6 +136,13 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
 
 		By("[" + upstreamHostPort + "] Verify registry-cache works")
 		common.VerifyRegistryCache(parentCtx, f.Logger, f.ShootFramework.ShootClient, fmt.Sprintf("%s/%s", upstreamHostPort, alpine3188Image), common.AlpinePodMutateFn)
+
+		By("Delete upstream registry namespace")
+		ctx, cancel = context.WithTimeout(parentCtx, 2*time.Minute)
+		defer cancel()
+		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: upstreamRegistryNamespace}}
+		Expect(client.IgnoreNotFound(f.ShootFramework.ShootClient.Client().Delete(ctx, ns))).To(Succeed())
+		Expect(f.ShootFramework.WaitUntilNamespaceIsDeleted(ctx, f.ShootFramework.ShootClient, upstreamRegistryNamespace)).To(Succeed())
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
