@@ -32,7 +32,7 @@ import (
 const (
 	alpine3188Image           = "alpine:3.18.8"
 	registryImage             = "europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.1.1@sha256:1be55279f18a2fe1a74edf2664cac61c1bea305b7b4642dab412e7affdcb3e33"
-	upstreamRegistryNamespace = "registry-test"
+	upstreamRegistryNamespace = "test-registry"
 	upstreamConfigYAML        = `version: 0.1
 log:
   fields:
@@ -98,10 +98,11 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
 		Expect(f.GardenClient.Client().Delete(ctx, secret)).To(Succeed())
 
 		if f.ShootFramework != nil {
-			ctx2, cancel2 := context.WithTimeout(parentCtx, 30*time.Second)
-			defer cancel2()
+			ctx, cancel = context.WithTimeout(parentCtx, 2*time.Minute)
+			defer cancel()
 			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: upstreamRegistryNamespace}}
-			_ = f.ShootFramework.ShootClient.Client().Delete(ctx2, ns)
+			Expect(client.IgnoreNotFound(f.ShootFramework.ShootClient.Client().Delete(ctx, ns))).To(Succeed())
+			Expect(f.ShootFramework.WaitUntilNamespaceIsDeleted(ctx, f.ShootFramework.ShootClient, upstreamRegistryNamespace)).To(Succeed())
 		}
 	})
 
