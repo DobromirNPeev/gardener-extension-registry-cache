@@ -11,6 +11,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/framework"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -140,9 +141,9 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
 		By("Delete upstream registry namespace")
 		ctx, cancel = context.WithTimeout(parentCtx, 2*time.Minute)
 		defer cancel()
-		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: upstreamRegistryNamespace}}
-		Expect(client.IgnoreNotFound(f.ShootFramework.ShootClient.Client().Delete(ctx, ns))).To(Succeed())
-		Expect(f.ShootFramework.WaitUntilNamespaceIsDeleted(ctx, f.ShootFramework.ShootClient, upstreamRegistryNamespace)).To(Succeed())
+		namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: upstreamRegistryNamespace}}
+		Expect(f.ShootFramework.ShootClient.Client().Delete(ctx, namespace)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(f.WaitUntilNamespaceIsDeleted(ctx, f.ShootFramework.ShootClient, upstreamRegistryNamespace)).To(Succeed())
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
@@ -165,8 +166,8 @@ func addPrivateRegistrySecret(shoot *gardencorev1beta1.Shoot) {
 // deployUpstreamRegistry deploy test upstream registry and return the <host:port> to it
 func deployUpstreamRegistry(ctx context.Context, f *framework.ShootCreationFramework, password string) (upstreamHostPort string) {
 	// Create dedicated namespace for the upstream registry
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: upstreamRegistryNamespace}}
-	ExpectWithOffset(1, f.ShootFramework.ShootClient.Client().Create(ctx, ns)).To(Succeed())
+	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: upstreamRegistryNamespace}}
+	ExpectWithOffset(1, f.ShootFramework.ShootClient.Client().Create(ctx, namespace)).To(Succeed())
 
 	// Create htpasswd Secret
 	encryptedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
