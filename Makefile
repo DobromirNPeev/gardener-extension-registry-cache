@@ -81,8 +81,8 @@ tools-for-generate: $(CONTROLLER_GEN) $(EXTENSION_GEN) $(CRD_REF_DOCS) $(HELM) $
 generate: tools-for-generate
 	@REPO_ROOT=$(REPO_ROOT) GARDENER_HACK_DIR=$(GARDENER_HACK_DIR) bash $(GARDENER_HACK_DIR)/generate-sequential.sh ./charts/... ./cmd/... ./example/... ./pkg/...
 	@REPO_ROOT=$(REPO_ROOT) GARDENER_HACK_DIR=$(GARDENER_HACK_DIR) $(REPO_ROOT)/hack/update-codegen.sh
-	@ARRAY_KEY=ignoreDeps GARDENER_HACK_DIR=$(GARDENER_HACK_DIR) RENOVATE_CONFIG=$(REPO_ROOT)/renovate.json5 bash $(GARDENER_HACK_DIR)/generate-renovate-ignore-deps.sh
 	$(MAKE) format
+	@GARDENER_HACK_DIR=$(GARDENER_HACK_DIR) RENOVATE_CONFIG=$(REPO_ROOT)/renovate.json5 bash $(GARDENER_HACK_DIR)/generate-renovate-ignore-deps.sh
 
 .PHONE: generate-in-docker
 generate-in-docker:
