@@ -23,23 +23,16 @@
   separateMinorPatch: true,
   packageRules: [
     {
+      // automerge patch updates
+      matchUpdateTypes: ['patch'],
+      automerge: true,
+    },
+    {
       groupName: 'gardener',
       matchPackageNames: [
         '/^(github\\.com\\/)?gardener\\/gardener(\\/.*)?$/',
       ],
       enabled: true,
-      postUpgradeTasks: {
-        commands: ['make generate MODE=sequential'],
-        fileFilters: ['**'],
-        executionMode: 'branch',
-      },
-    },
-    {
-      matchPackageNames: [
-        '/^(github\\.com\\/)?gardener\\/gardener(\\/.*)?$/',
-      ],
-      automerge: true,
-      matchUpdateTypes: ['patch'],
       postUpgradeTasks: {
         commands: ['make generate MODE=sequential'],
         fileFilters: ['**'],
