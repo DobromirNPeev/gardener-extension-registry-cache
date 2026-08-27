@@ -23,6 +23,11 @@
   separateMinorPatch: true,
   packageRules: [
     {
+      // automerge patch updates
+      matchUpdateTypes: ['patch'],
+      automerge: true,
+    },
+    {
       groupName: 'gardener',
       matchPackageNames: [
         '/^(github\\.com\\/)?gardener\\/gardener(\\/.*)?$/',
@@ -33,23 +38,6 @@
         fileFilters: ['**'],
         executionMode: 'branch',
       },
-    },
-    {
-      matchPackageNames: [
-        '/^(github\\.com\\/)?gardener\\/gardener(\\/.*)?$/',
-      ],
-      automerge: true,
-      matchUpdateTypes: ['patch'],
-      postUpgradeTasks: {
-        commands: ['make generate MODE=sequential'],
-        fileFilters: ['**'],
-        executionMode: 'branch',
-      },
-    },
-    {
-      matchPackageNames: ['go', 'golang'],
-      matchUpdateTypes: ['patch'],
-      automerge: true,
     },
   ],
   // The following list of dependencies to ignore is updated by `make generate`.
