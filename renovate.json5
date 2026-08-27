@@ -46,6 +46,11 @@
         executionMode: 'branch',
       },
     },
+    {
+      matchPackageNames: ['go', 'golang'],
+      matchUpdateTypes: ['patch'],
+      automerge: true,
+    },
   ],
   // The following list of dependencies to ignore is updated by `make generate`.
   // DO NOT EDIT THIS SECTION MANUALLY.
