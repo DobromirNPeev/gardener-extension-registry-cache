@@ -20,6 +20,7 @@
       datasourceTemplate: 'docker',
     },
   ],
+  separateMinorPatch: true,
   packageRules: [
     {
       groupName: 'gardener',
@@ -28,7 +29,7 @@
       ],
       enabled: true,
       postUpgradeTasks: {
-        commands: ['make generate'],
+        commands: ['make generate MODE=sequential'],
         fileFilters: ['**'],
         executionMode: 'branch',
       },
@@ -40,7 +41,7 @@
       automerge: true,
       matchUpdateTypes: ['patch'],
       postUpgradeTasks: {
-        commands: ['make generate'],
+        commands: ['make generate MODE=sequential'],
         fileFilters: ['**'],
         executionMode: 'branch',
       },
