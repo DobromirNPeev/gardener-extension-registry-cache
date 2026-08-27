@@ -9,7 +9,6 @@
   labels: [
     'kind/enhancement',
   ],
-  separateMinorPatch: true,
   postUpdateOptions: [
     'gomodTidy',
   ],
@@ -21,6 +20,7 @@
       datasourceTemplate: 'docker',
     },
   ],
+  separateMinorPatch: true,
   packageRules: [
     {
       groupName: 'gardener',
@@ -29,7 +29,7 @@
       ],
       enabled: true,
       postUpgradeTasks: {
-        commands: ['make generate MODE="sequential"'],
+        commands: ['make generate MODE=sequential'],
         fileFilters: ['**'],
         executionMode: 'branch',
       },
@@ -41,7 +41,7 @@
       automerge: true,
       matchUpdateTypes: ['patch'],
       postUpgradeTasks: {
-        commands: ['make generate MODE="sequential"'],
+        commands: ['make generate MODE=sequential'],
         fileFilters: ['**'],
         executionMode: 'branch',
       },
