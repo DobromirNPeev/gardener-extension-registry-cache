@@ -18,16 +18,3 @@ updates:
       - "github.com/gardener/gardener/pkg/apis"
   labels:
   - kind/enhancement
-# Create PRs for golang version updates
-- package-ecosystem: docker
-  directory: /
-  schedule:
-    interval: daily
-  labels:
-  - kind/enhancement
-- package-ecosystem: docker
-  directory: /.test-defs
-  schedule:
-    interval: daily
-  labels:
-  - kind/enhancement
