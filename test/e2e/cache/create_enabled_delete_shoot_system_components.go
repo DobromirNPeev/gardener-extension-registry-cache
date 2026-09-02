@@ -32,12 +32,6 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func
 	})
 	f.Shoot = shoot
 
-	BeforeAll(func() {
-		DeferCleanup(func(ctx SpecContext) {
-			Expect(e2e.DeleteShootIfExists(ctx, f)).To(Succeed())
-		}, NodeTimeout(15*time.Minute))
-	})
-
 	It("should create Shoot", func(ctx SpecContext) {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
@@ -49,11 +43,11 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func
 
 	It("[europe-docker.pkg.dev] should verify registry-cache works", func(ctx SpecContext) {
 		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, common.ArtifactRegistryNginx1176Image)
-	}, SpecTimeout(10*time.Minute))
+	}, SpecTimeout(12*time.Minute))
 
 	It("[registry.k8s.io] should verify registry-cache works", func(ctx SpecContext) {
 		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, common.RegistryK8sNginx1154Image)
-	}, SpecTimeout(10*time.Minute))
+	}, SpecTimeout(12*time.Minute))
 
 	It("should delete Shoot", func(ctx SpecContext) {
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())

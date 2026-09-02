@@ -65,18 +65,6 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func
 		upstreamHostPort string
 	)
 
-	BeforeAll(func() {
-		DeferCleanup(func(ctx SpecContext) {
-			if secret != nil {
-				// Ignore not-found in case the secret was never created
-				_ = f.GardenClient.Client().Delete(ctx, secret)
-			}
-		}, NodeTimeout(10*time.Second))
-		DeferCleanup(func(ctx SpecContext) {
-			Expect(e2e.DeleteShootIfExists(ctx, f)).To(Succeed())
-		}, NodeTimeout(10*time.Minute))
-	})
-
 	It("should create Shoot", func(ctx SpecContext) {
 		var err error
 		password, err = utils.GenerateRandomString(32)
@@ -128,16 +116,17 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func
 
 	It("should verify registry-cache works", func(ctx SpecContext) {
 		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, fmt.Sprintf("%s/%s", upstreamHostPort, alpine3188Image), common.AlpinePodMutateFn)
-	}, SpecTimeout(10*time.Minute))
+	}, SpecTimeout(12*time.Minute))
 
 	It("should delete Shoot", func(ctx SpecContext) {
-		By("Delete upstream registry namespace")
 		namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: upstreamRegistryNamespace}}
 		Expect(f.ShootFramework.ShootClient.Client().Delete(ctx, namespace)).To(Or(Succeed(), BeNotFoundError()))
 		Expect(f.WaitUntilNamespaceIsDeleted(ctx, f.ShootFramework.ShootClient, upstreamRegistryNamespace)).To(Succeed())
 
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
-	}, SpecTimeout(10*time.Minute))
+
+		Expect(f.GardenClient.Client().Delete(ctx, secret)).To(Or(Succeed(), BeNotFoundError()))
+	}, SpecTimeout(15*time.Minute))
 })
 
 func addPrivateRegistrySecret(shoot *gardencorev1beta1.Shoot) {

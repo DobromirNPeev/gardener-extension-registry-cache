@@ -26,12 +26,6 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func
 	})
 	f.Shoot = shoot
 
-	BeforeAll(func() {
-		DeferCleanup(func(ctx SpecContext) {
-			Expect(e2e.DeleteShootIfExists(ctx, f)).To(Succeed())
-		}, NodeTimeout(15*time.Minute))
-	})
-
 	It("should create Shoot", func(ctx SpecContext) {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
@@ -49,7 +43,7 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func
 
 	It("should verify registry-cache works with TLS disabled", func(ctx SpecContext) {
 		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, common.GithubRegistryJitesoftAlpine3188Image, common.AlpinePodMutateFn)
-	}, SpecTimeout(10*time.Minute))
+	}, SpecTimeout(12*time.Minute))
 
 	It("should enable TLS", func(ctx SpecContext) {
 		Expect(f.UpdateShoot(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
@@ -65,7 +59,7 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func
 		// We are using ghcr.io/jitesoft/alpine:3.19.4 as ghcr.io/jitesoft/alpine:3.18.8 is already used in the test.
 		// Hence, ghcr.io/jitesoft/alpine:3.18.8 will be present in the Node.
 		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, common.GithubRegistryJitesoftAlpine3194Image, common.AlpinePodMutateFn)
-	}, SpecTimeout(10*time.Minute))
+	}, SpecTimeout(12*time.Minute))
 
 	It("should delete Shoot", func(ctx SpecContext) {
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())

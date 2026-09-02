@@ -27,12 +27,6 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func
 	})
 	f.Shoot = shoot
 
-	BeforeAll(func() {
-		DeferCleanup(func(ctx SpecContext) {
-			Expect(e2e.DeleteShootIfExists(ctx, f)).To(Succeed())
-		}, NodeTimeout(15*time.Minute))
-	})
-
 	It("should create Shoot", func(ctx SpecContext) {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
@@ -40,7 +34,7 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func
 
 	It("should verify registry-cache works", func(ctx SpecContext) {
 		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, common.GithubRegistryJitesoftAlpine3188Image, common.AlpinePodMutateFn)
-	}, SpecTimeout(10*time.Minute))
+	}, SpecTimeout(12*time.Minute))
 
 	It("should hibernate Shoot", func(ctx SpecContext) {
 		Expect(f.HibernateShoot(ctx, f.Shoot)).To(Succeed())

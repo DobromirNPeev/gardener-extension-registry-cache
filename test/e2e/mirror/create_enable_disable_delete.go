@@ -20,12 +20,6 @@ var _ = Describe("Registry Mirror Extension Tests", Label("mirror"), Ordered, fu
 	f := e2e.DefaultShootCreationFramework()
 	f.Shoot = e2e.DefaultShoot("e2e-mirror-def")
 
-	BeforeAll(func() {
-		DeferCleanup(func(ctx SpecContext) {
-			Expect(e2e.DeleteShootIfExists(ctx, f)).To(Succeed())
-		}, NodeTimeout(15*time.Minute))
-	})
-
 	It("should create Shoot", func(ctx SpecContext) {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()

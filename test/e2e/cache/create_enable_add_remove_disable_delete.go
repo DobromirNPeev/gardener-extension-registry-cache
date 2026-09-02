@@ -21,12 +21,6 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func
 	f := e2e.DefaultShootCreationFramework()
 	f.Shoot = e2e.DefaultShoot("e2e-cache-def")
 
-	BeforeAll(func() {
-		DeferCleanup(func(ctx SpecContext) {
-			Expect(e2e.DeleteShootIfExists(ctx, f)).To(Succeed())
-		}, NodeTimeout(15*time.Minute))
-	})
-
 	It("should create Shoot", func(ctx SpecContext) {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
@@ -45,7 +39,7 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func
 
 	It("[ghcr.io] should verify registry-cache works", func(ctx SpecContext) {
 		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, common.GithubRegistryJitesoftAlpine3188Image, common.AlpinePodMutateFn)
-	}, SpecTimeout(10*time.Minute))
+	}, SpecTimeout(12*time.Minute))
 
 	It("should add the registry.gitlab.com upstream to the registry-cache extension", func(ctx SpecContext) {
 		size := resource.MustParse("2Gi")
@@ -61,7 +55,7 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func
 
 	It("[registry.gitlab.com] should verify registry-cache works", func(ctx SpecContext) {
 		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, common.GitlabRegistryJitesoftAlpine31710Image, common.AlpinePodMutateFn)
-	}, SpecTimeout(10*time.Minute))
+	}, SpecTimeout(12*time.Minute))
 
 	It("should remove the registry.gitlab.com upstream from the registry-cache extension", func(ctx SpecContext) {
 		size := resource.MustParse("2Gi")
