@@ -5,7 +5,6 @@
 package cache
 
 import (
-	"context"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -18,39 +17,33 @@ import (
 	"github.com/gardener/gardener-extension-registry-cache/test/e2e"
 )
 
-var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
-	parentCtx := context.Background()
-
+var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func() {
 	f := e2e.DefaultShootCreationFramework()
 	f.Shoot = e2e.DefaultShoot("e2e-cache-def")
 
-	It("should create Shoot, enable extension, add upstream, remove upstream, disable extension, delete Shoot", func() {
-		By("Create Shoot")
-		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
+	It("should create Shoot", func(ctx SpecContext) {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
+	}, SpecTimeout(15*time.Minute))
 
-		By("Enable the registry-cache extension")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-		defer cancel()
+	It("should enable the registry-cache extension", func(ctx SpecContext) {
+		size := resource.MustParse("2Gi")
 		Expect(f.UpdateShoot(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
-			size := resource.MustParse("2Gi")
 			common.AddOrUpdateRegistryCacheExtension(shoot, []v1alpha3.RegistryCache{
 				{Upstream: "ghcr.io", Volume: &v1alpha3.Volume{Size: &size}},
 			})
 
 			return nil
 		})).To(Succeed())
+	}, SpecTimeout(10*time.Minute))
 
-		By("[ghcr.io] Verify registry-cache works")
-		common.VerifyRegistryCache(parentCtx, f.Logger, f.ShootFramework.ShootClient, common.GithubRegistryJitesoftAlpine3188Image, common.AlpinePodMutateFn)
+	It("[ghcr.io] should verify registry-cache works", func(ctx SpecContext) {
+		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, common.GithubRegistryJitesoftAlpine3188Image, common.AlpinePodMutateFn)
+	}, SpecTimeout(12*time.Minute))
 
-		By("Add the registry.gitlab.com upstream to the registry-cache extension")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-		defer cancel()
+	It("should add the registry.gitlab.com upstream to the registry-cache extension", func(ctx SpecContext) {
+		size := resource.MustParse("2Gi")
 		Expect(f.UpdateShoot(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
-			size := resource.MustParse("2Gi")
 			common.AddOrUpdateRegistryCacheExtension(shoot, []v1alpha3.RegistryCache{
 				{Upstream: "ghcr.io", Volume: &v1alpha3.Volume{Size: &size}},
 				{Upstream: "registry.gitlab.com", Volume: &v1alpha3.Volume{Size: &size}},
@@ -58,44 +51,40 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
 
 			return nil
 		})).To(Succeed())
+	}, SpecTimeout(10*time.Minute))
 
-		By("[registry.gitlab.com] Verify registry-cache works")
-		common.VerifyRegistryCache(parentCtx, f.Logger, f.ShootFramework.ShootClient, common.GitlabRegistryJitesoftAlpine31710Image, common.AlpinePodMutateFn)
+	It("[registry.gitlab.com] should verify registry-cache works", func(ctx SpecContext) {
+		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, common.GitlabRegistryJitesoftAlpine31710Image, common.AlpinePodMutateFn)
+	}, SpecTimeout(12*time.Minute))
 
-		By("Remove the registry.gitlab.com upstream from the registry-cache extension")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-		defer cancel()
+	It("should remove the registry.gitlab.com upstream from the registry-cache extension", func(ctx SpecContext) {
+		size := resource.MustParse("2Gi")
 		Expect(f.UpdateShoot(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
-			size := resource.MustParse("2Gi")
 			common.AddOrUpdateRegistryCacheExtension(shoot, []v1alpha3.RegistryCache{
 				{Upstream: "ghcr.io", Volume: &v1alpha3.Volume{Size: &size}},
 			})
 
 			return nil
 		})).To(Succeed())
+	}, SpecTimeout(10*time.Minute))
 
-		By("[registry.gitlab.com] Verify registry configuration is removed")
-		ctx, cancel = context.WithTimeout(parentCtx, 2*time.Minute)
-		defer cancel()
+	It("[registry.gitlab.com] should verify registry configuration is removed", func(ctx SpecContext) {
 		common.VerifyHostsTOMLFilesDeletedForAllNodes(ctx, f.Logger, f.ShootFramework.ShootClient, []string{"registry.gitlab.com"})
+	}, SpecTimeout(2*time.Minute))
 
-		By("Disable the registry-cache extension")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-		defer cancel()
+	It("should disable the registry-cache extension", func(ctx SpecContext) {
 		Expect(f.UpdateShoot(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
 			common.RemoveExtension(shoot, "registry-cache")
 
 			return nil
 		})).To(Succeed())
+	}, SpecTimeout(10*time.Minute))
 
-		By("[ghcr.io] Verify registry configuration is removed")
-		ctx, cancel = context.WithTimeout(parentCtx, 2*time.Minute)
-		defer cancel()
+	It("[ghcr.io] should verify registry configuration is removed", func(ctx SpecContext) {
 		common.VerifyHostsTOMLFilesDeletedForAllNodes(ctx, f.Logger, f.ShootFramework.ShootClient, []string{"ghcr.io"})
+	}, SpecTimeout(2*time.Minute))
 
-		By("Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
+	It("should delete Shoot", func(ctx SpecContext) {
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
-	})
+	}, SpecTimeout(15*time.Minute))
 })

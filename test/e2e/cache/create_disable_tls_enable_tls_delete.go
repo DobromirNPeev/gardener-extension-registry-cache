@@ -5,7 +5,6 @@
 package cache
 
 import (
-	"context"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -18,9 +17,7 @@ import (
 	"github.com/gardener/gardener-extension-registry-cache/test/e2e"
 )
 
-var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
-	parentCtx := context.Background()
-
+var _ = Describe("Registry Cache Extension Tests", Label("cache"), Ordered, func() {
 	f := e2e.DefaultShootCreationFramework()
 	shoot := e2e.DefaultShoot("e2e-cache-tls")
 	size := resource.MustParse("2Gi")
@@ -29,16 +26,12 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
 	})
 	f.Shoot = shoot
 
-	It("should create Shoot with tls enabled, disable tls, enable tls, delete Shoot", func() {
-		By("Create Shoot")
-		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
+	It("should create Shoot", func(ctx SpecContext) {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
+	}, SpecTimeout(15*time.Minute))
 
-		By("Disable TLS")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-		defer cancel()
+	It("should disable TLS", func(ctx SpecContext) {
 		Expect(f.UpdateShoot(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
 			common.AddOrUpdateRegistryCacheExtension(shoot, []v1alpha3.RegistryCache{
 				{Upstream: "ghcr.io", Volume: &v1alpha3.Volume{Size: &size}, HTTP: &v1alpha3.HTTP{TLS: false}},
@@ -46,13 +39,13 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
 
 			return nil
 		})).To(Succeed())
+	}, SpecTimeout(10*time.Minute))
 
-		By("Verify registry-cache works")
-		common.VerifyRegistryCache(parentCtx, f.Logger, f.ShootFramework.ShootClient, common.GithubRegistryJitesoftAlpine3188Image, common.AlpinePodMutateFn)
+	It("should verify registry-cache works with TLS disabled", func(ctx SpecContext) {
+		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, common.GithubRegistryJitesoftAlpine3188Image, common.AlpinePodMutateFn)
+	}, SpecTimeout(12*time.Minute))
 
-		By("Enable TLS")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-		defer cancel()
+	It("should enable TLS", func(ctx SpecContext) {
 		Expect(f.UpdateShoot(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
 			common.AddOrUpdateRegistryCacheExtension(shoot, []v1alpha3.RegistryCache{
 				{Upstream: "ghcr.io", Volume: &v1alpha3.Volume{Size: &size}, HTTP: &v1alpha3.HTTP{TLS: true}},
@@ -60,15 +53,15 @@ var _ = Describe("Registry Cache Extension Tests", Label("cache"), func() {
 
 			return nil
 		})).To(Succeed())
+	}, SpecTimeout(10*time.Minute))
 
-		By("Verify registry-cache works")
+	It("should verify registry-cache works with TLS enabled", func(ctx SpecContext) {
 		// We are using ghcr.io/jitesoft/alpine:3.19.4 as ghcr.io/jitesoft/alpine:3.18.8 is already used in the test.
 		// Hence, ghcr.io/jitesoft/alpine:3.18.8 will be present in the Node.
-		common.VerifyRegistryCache(parentCtx, f.Logger, f.ShootFramework.ShootClient, common.GithubRegistryJitesoftAlpine3194Image, common.AlpinePodMutateFn)
+		common.VerifyRegistryCache(ctx, f.Logger, f.ShootFramework.ShootClient, common.GithubRegistryJitesoftAlpine3194Image, common.AlpinePodMutateFn)
+	}, SpecTimeout(12*time.Minute))
 
-		By("Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
+	It("should delete Shoot", func(ctx SpecContext) {
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
-	})
+	}, SpecTimeout(15*time.Minute))
 })
